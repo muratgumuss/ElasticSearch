@@ -1,0 +1,659 @@
+ElasticSearch Queries
+
+-- Aynı kayıttan yoksa Kayıt atar, kayıt varsa günceller
+PUT products/_doc/1
+{
+  "name":"iPhone 14",
+  "rating":8.5,
+  "published":true,
+  "category":"mobile phones",
+  "price":{
+    "usd":2000,
+    "eur":1800
+  }
+}
+
+-- GET -- idsi 1 olan datayı source ile birlikte verir 
+GET products/_doc/1
+
+{
+  "_index": "products",
+  "_id": "1",
+  "_version": 1,
+  "_seq_no": 0,
+  "_primary_term": 1,
+  "found": true,
+  "_source": {
+    "name": "iPhone 14",
+    "rating": 8.5,
+    "published": true,
+    "category": "mobile phones",
+    "price": {
+      "usd": 2000,
+      "eur": 1800
+    }
+  }
+}
+-- _source id si birlikte veriyor datayı
+GET products/_source/1
+
+{
+  "_index": "products",
+  "_id": "1",
+  "_version": 1,
+  "_seq_no": 0,
+  "_primary_term": 1,
+  "found": true,
+  "_source": {
+    "name": "iPhone 14",
+    "rating": 8.5,
+    "published": true,
+    "category": "mobile phones",
+    "price": {
+      "usd": 2000,
+      "eur": 1800
+    }
+  }
+}
+
+-- GET _cat/shards/products kaç shard var onu döndürüyor.
+
+
+
+PUT products/_settings
+{
+  "index":{"refresh_interval":"5s"}
+}
+
+PUT products/_doc/20?refresh=true
+{
+  "name":"Samsung",
+  "rating":9.5,
+  "published":true,
+  "category":"mobile phones",
+  "price":{
+    "usd":2500,
+    "eur":1900
+  }
+}
+
+GET products/_doc/1
+
+POST products/_update/1
+{
+  "doc": {
+  "name":"Nokia Updated",
+  "rating": 9,
+  "published": true,
+  "category": "mobile phones"
+  }
+}
+
+PUT products/_doc/1
+{
+  "name":"Nokia",
+  "rating":9.5,
+  "published":true,
+  "category":"mobile phones",
+  "price":{
+    "usd":2500,
+    "eur":1900
+  }
+}
+
+-- idsi 1 olan kaydı siler
+DELETE products/_doc/1
+
+-- idsi 1 kayıt varsa 200 döner yoksa 404
+HEAD products/_doc/1
+
+-- dataları almak için kullanılır
+GET products/_search
+{
+  "query": {"match_all": {}}
+}
+
+-- idsi 2 ve 20 olan kayıtları varsa getirir
+GET products/_mget
+{
+  "ids":[2,20]
+}
+--alternatif idsi 1 ve 2 olan verileri getirir.
+GET products/_mget
+{
+  "docs": [
+    {"_index":"products",
+      "_id":1
+    },
+    {"_index":"products",
+      "_id":2
+    }
+    ]
+}
+--idsi 1 olan datayı metadatası olmadan getirir.
+GET products/_source/1
+
+-- idsi 2 olan datanın name ve rating kolonlarını getirir
+GET products/_doc/2?_source_includes=name,rating
+
+-- idsi 2 olan datanın rating kolonunu getirmez, diğer kolonları getirir.
+GET products/_doc/2?_source_excludes=rating
+--metadata olmadan idsi 2 olan datanın name ve rating kolonunu getirir.
+GET products/_source/2?_source_includes=name,rating
+
+
+PUT pen/_doc/1
+{
+  "name":"pen 1",
+  "price":38.99,
+  "created":"2010/05/05"
+}
+-- pen verisinin mappingini getirir.
+GET pen/_mapping
+-- ElasticSearch tarafından oluşturulan mapping., name alanı için 2 data tipi belirlemiş, text ve keyword.
+--keyword veri tipi belirlendiğinide analiz(tokenization) sürecinden geçirmiyor. keyword veritipindekiler bütün olarak aranıyor, email tckn gibi
+{
+  "pen": {
+    "mappings": {
+      "properties": {
+        "created": {
+          "type": "date",
+          "format": "yyyy/MM/dd HH:mm:ss||yyyy/MM/dd||epoch_millis"
+        },
+        "name": {
+          "type": "text",
+          "fields": {
+            "keyword": {
+              "type": "keyword",
+              "ignore_above": 256
+            }
+          }
+        },
+        "price": {
+          "type": "float"
+        }
+      }
+    }
+  }
+}
+
+PUT pen/_doc/2
+{
+  "name":"pen 1",
+  "price":38.99,
+  "created":"2010/05/05",
+  "stocks":{
+    "turkey":100,
+    "germany":50
+  }
+}
+
+{
+  "pen": {
+    "mappings": {
+      "properties": {
+        "created": {
+          "type": "date",
+          "format": "yyyy/MM/dd HH:mm:ss||yyyy/MM/dd||epoch_millis"
+        },
+        "name": {
+          "type": "text",
+          "fields": {
+            "keyword": {
+              "type": "keyword",
+              "ignore_above": 256
+            }
+          }
+        },
+        "price": {
+          "type": "float"
+        },
+        "stocks": {
+          "properties": {
+            "germany": {
+              "type": "long"
+            },
+            "turkey": {
+              "type": "long"
+            }
+          }
+        }
+      }
+    }
+  }
+}
+
+
+PUT products2
+{
+  "mappings": {
+    "properties": {
+      "name":{
+        "type": "text"
+      },
+      "price": {
+        "type":"long"
+      },
+      "stock_no":{"type":"keyword"},
+      "warehouse":{
+        "properties": {
+          "germany":{"type":"integer"},
+          "turkey":{"type":"integer"}
+        }
+      }
+    }
+  }
+}
+
+GET products2/_mapping
+
+PUT products2/_doc/1
+{
+  "name":"kalem 1",
+  "price":22,
+  "stock_no":"ABC125",
+  "warehouse":{
+    "germany":20,
+    "turkey":40
+  }
+}
+
+GET products2/_doc/1
+-- ek property ekleyebiliyoruz ama var olan propertyi güncellememize ElasticSearch izin vermiyor
+-- bunun için yeniden indexlememiz lazım. 
+
+--propery değiştirmek için products2 gibi tekrar bir tablo oluşturuyoruz.istediğimiz tiplerle beraber,
+-- _reindex komutuyla verileri yeni tabloya taşıyoruz.
+
+PUT products3
+{
+  "mappings": {
+      "properties": {
+        "color": {
+          "type": "keyword"
+        },
+        "name": {
+          "type": "keyword"
+        },
+        "price": {
+          "type": "double"
+        },
+        "stock_no": {
+          "type": "keyword"
+        },
+        "warehouse": {
+          "properties": {
+            "germany": {
+              "type": "integer"
+            },
+            "turkey": {
+              "type": "integer"
+            }
+          }
+        }
+      }
+    }
+  }
+
+POST /_reindex
+{
+  "source": {"index": "products2"},
+  "dest": {"index": "products3"}
+}
+
+GET products3/_mapping
+GET products3/_doc/1
+
+--terms quries
+POST kibana_sample_data_ecommerce/_search
+{
+  "query": {
+    "term": {
+      "customer_first_name.keyword": {
+        "value": "Sonya",
+        "case_insensitive":true
+      }
+    }
+  }
+}
+
+POST kibana_sample_data_ecommerce/_search
+{
+  "query": {
+    "terms": {
+      "customer_id": ["45","38","34"]
+    }
+  }
+}
+
+POST kibana_sample_data_ecommerce/_search
+{
+  "query": {
+    "terms": {
+      "customer_last_name.keyword": ["Perkins","Henderson","Gross"]
+    }
+  }
+}
+
+-- id search (id kolonu meta data kısmında)
+POST kibana_sample_data_ecommerce/_search
+{
+  "query": {
+    "ids": {
+      "values": ["LkbCLpwBRz6scuPzqHRU","VEbCLpwBRz6scuPzqHRU"]
+    }
+  }
+}
+
+-- exist query
+POST kibana_sample_data_ecommerce/_search
+{
+  "query": {
+    "exists": {
+      "field": "order_id"
+    }
+  }
+}
+-- prefix query, like gibi değil start with gibi çalışıyor
+POST kibana_sample_data_ecommerce/_search
+{
+  "query": {
+  "prefix": {
+    "customer_full_name.keyword": {
+      "value": "Edd"
+    }
+  }
+  }
+}
+--range query
+POST kibana_sample_data_ecommerce/_search
+{
+  "query": {
+    "range": {
+      "taxless_total_price": {
+        "gte": 10,
+        "lte": 20
+      }
+    }
+  }
+}
+--wildcard Queries, tek harfi bilmediklerimiz için ? başının veya sonunu bilmediğimiz datalar için * kullanabiliriz.
+POST kibana_sample_data_ecommerce/_search
+{
+  "query": {
+    "wildcard": {
+      "customer_full_name.keyword": {
+        "value": "Eddi? Underwood"
+      }
+    }
+  }
+}
+
+POST kibana_sample_data_ecommerce/_search
+{
+  "query": {
+    "wildcard": {
+      "customer_full_name.keyword": {
+        "value": "*Al*"
+      }
+    }
+  }
+}
+POST kibana_sample_data_ecommerce/_search
+{
+  "query": {
+    "wildcard": {
+      "customer_full_name.keyword": {
+        "value": "Eddi? Under?ood"
+      }
+    }
+  }
+}
+-- fuzzy query, fuzziness değerine göre unutulan karakteri tolere edip dataları getirir
+POST kibana_sample_data_ecommerce/_search
+{
+  "query": {
+    "fuzzy": {
+      "customer_first_name.keyword": {
+        "value": "Stephani",
+        "fuzziness": 1
+      }
+    }
+    }
+}
+-- pagenation from sıfırdan başla size 3 kayıt getir anlamında
+POST kibana_sample_data_ecommerce/_search
+{ 
+  "from": 0, 
+  "size": 3, 
+  "query": {
+    "fuzzy": {
+      "customer_first_name.keyword": {
+        "value": "Stephani",
+        "fuzziness": 1
+      }
+    }
+    }
+}
+-- exclude, include query , kolon bazında dataları filtreleyebiliyoruz
+POST kibana_sample_data_ecommerce/_search
+{ 
+  "_source": {
+    "includes": ["category","customer_birth_date","currency"],
+    "excludes": ["customer_first_name.keyword"]
+  }, 
+  "from": 0, 
+  "size": 3, 
+  "query": {
+    "fuzzy": {
+      "customer_first_name.keyword": {
+        "value": "Stephani",
+        "fuzziness": 1
+      }
+    }
+    }
+}
+
+-- sort query
+POST kibana_sample_data_ecommerce/_search
+{
+  "size": 10,
+  "query": {
+    "term": {
+      "customer_gender": {
+        "value": "MALE"
+      }
+    }
+  },
+  "sort": [
+    {
+      "taxless_total_price": {
+        "order": "desc"
+      },
+      "customer_first_name.keyword": {
+        "order": "asc"
+      }
+    }
+  ]
+}
+-- full text search queries
+POST kibana_sample_data_ecommerce/_search
+{
+  "query": {
+    "match": {
+      "category": "women's"
+    }
+  }
+}
+
+POST kibana_sample_data_ecommerce/_search
+{
+  "query": {
+    "match": {
+      "customer_full_name": "Yahya Rivera"
+    }
+  }
+}
+
+POST kibana_sample_data_ecommerce/_search
+{
+  "query": {
+    "match": {
+      "customer_full_name": {
+        "query": "Yahya River",
+        "operator": "and",
+        "fuzziness": 1
+      }
+    }
+  }
+}
+
+-- multi_match birden fazla kolonda arama yapabiliyor.
+POST kibana_sample_data_ecommerce/_search
+{
+  "query": {
+    "multi_match": {
+      "query": "Sultan",
+      "fields": ["customer_first_name","customer_last_name","customer_full_name"]
+    }
+  }
+}
+
+-- match_bool_prefix query M olanları veya diğerlerini getiriyor. Son kelimeyi prefix olarak alıyor.
+POST kibana_sample_data_ecommerce/_search
+{
+  "query": {
+    "match_bool_prefix": {
+      "customer_full_name": "Sultan M"
+    }
+  }
+}
+
+-- match_bool_prefix veriyi yazılan sırayla ile arar.
+POST kibana_sample_data_ecommerce/_search
+{
+  "query": {
+    "match_phrase": {
+      "customer_full_name": "Sultan Al Moran"
+    }
+  }
+}
+
+-- match_phrase_prefix query
+POST kibana_sample_data_ecommerce/_search
+{
+  "query": {
+    "match_phrase_prefix": {
+      "customer_full_name": "Sultan Al Moran"
+    }
+  }
+}
+--Compund Queries
+GET kibana_sample_data_ecommerce/_search
+{
+  "query": {
+    "bool": {
+      "must": [
+        {"term": {
+          "geoip.city_name": {
+            "value": "New York"
+          }
+        }}
+      ],
+      "must_not": [
+        {"range": {
+          "taxful_total_price": {
+            "lte": 100
+          }
+        }}
+      ],
+      "should": [
+        {"term": {
+          "category.keyword": {
+            "value": "Women's Clothing"
+          }
+        }}
+      ],
+      "filter": [
+        {"term": {
+          "manufacturer.keyword": "Tigress Enterprises"
+        }}
+      ]
+    }
+  }
+}
+
+--Bucket aggregrations |Term query group by gibi düşünebiliriz.
+GET kibana_sample_data_ecommerce/_search
+{
+  "_source": false, 
+  "aggs": {
+    "category_name": {
+      "terms": {
+        "field": "category.keyword",
+        "size": 10, 
+        "order": {
+          "_key": "asc"
+        }
+      }
+    }
+  }
+}
+
+-- range query
+GET kibana_sample_data_ecommerce/_search
+{
+  "_source": false, 
+  "aggs": {
+    "category_price_range": {
+      "range": {
+        "field": "taxful_total_price",
+        "ranges": [
+          {"to": 10},
+          {"from": 10,"to":100},
+          {"to":100}
+        ]
+      }
+    }
+  }
+}
+
+-- avg query
+GET kibana_sample_data_ecommerce/_search
+{
+  "_source": false, 
+  "query": {
+    "term": {
+      "category.keyword": {
+        "value": "Men's Clothing"
+      }
+    }
+  }, 
+  "aggs": {
+    "avg price": {
+      "avg": {
+        "field": "taxful_total_price"
+      }
+    }
+  }
+}
+
+-- sum/max/min query 
+GET kibana_sample_data_ecommerce/_search
+{
+  "_source": false, 
+  "query": {
+    "term": {
+      "category.keyword": {
+        "value": "Men's Clothing"
+      }
+    }
+  }, 
+  "aggs": {
+    "avg price": {
+      "sum/max/min": {
+        "field": "taxful_total_price"
+      }
+    }
+  }
+}
