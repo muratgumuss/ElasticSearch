@@ -1,4 +1,5 @@
-﻿using Nest;
+﻿using ElasticSearch.Api.DTOs;
+using Nest;
 
 namespace ElasticSearch.Api.Models
 {
@@ -17,14 +18,14 @@ namespace ElasticSearch.Api.Models
         public ProductFeature? Feature { get; set; }
 
 
-        //public ProductDto CreateDto()
-        //{
-        //    if (Feature == null)
-        //        return new ProductDto(Id, Name, Price, Stock, null);
+        public ProductDto CreateDto()
+        {
+            if (Feature == null)
+                return new ProductDto(Id, Name, Price, Stock, null);
 
-        //    return new ProductDto(Id, Name, Price, Stock, new ProductFeatureDto(Feature.Width, Feature.Height, Feature.Color.ToString()));
+            return new ProductDto(Id, Name, Price, Stock, new ProductFeatureDto(Feature.Width, Feature.Height, Feature.Color.ToString()));
 
-        //}
+        }
 
 
     }
