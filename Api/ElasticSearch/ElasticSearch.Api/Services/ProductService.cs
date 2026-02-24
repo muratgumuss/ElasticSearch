@@ -1,6 +1,5 @@
 ﻿using ElasticSearch.Api.DTOs;
 using ElasticSearch.Api.Repositories;
-using Nest;
 using System.Net;
 
 namespace ElasticSearch.Api.Services
@@ -76,14 +75,15 @@ namespace ElasticSearch.Api.Services
         {
             var deleteResponse = await _productRepository.DeleteAsync(id);
 
-            if (!deleteResponse.IsValid && deleteResponse.Result == Result.NotFound)
+            if (!deleteResponse.IsValidResponse && deleteResponse.Result == Elastic.Clients.Elasticsearch.Result.NotFound)
             {
                 return ResponseDto<bool>.Fail(new List<string> { "Silmeye çalıştığınız ürün bulunamamıştır." }, System.Net.HttpStatusCode.NotFound);
             }
 
-            if (!deleteResponse.IsValid)
+            if (!deleteResponse.IsValidResponse)
             {
-                _logger.LogError(deleteResponse.OriginalException, deleteResponse.ServerError.Error.ToString());
+                deleteResponse.TryGetOriginalException(out Exception? exception);
+                _logger.LogError(exception, deleteResponse.ElasticsearchServerError.Error.ToString());
 
                 return ResponseDto<bool>.Fail(new List<string> { "silme esnasında bir hata meydana geldi." }, System.Net.HttpStatusCode.InternalServerError);
             }
