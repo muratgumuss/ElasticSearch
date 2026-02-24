@@ -1,15 +1,16 @@
-﻿using ElasticSearch.Api.DTOs;
+﻿using Elastic.Clients.Elasticsearch;
+using ElasticSearch.Api.DTOs;
 using ElasticSearch.Api.Models;
-using Nest;
 using System.Collections.Immutable;
 
 namespace ElasticSearch.Api.Repositories
 {
     public class ProductRepository
     {
-        private readonly ElasticClient _client;
+        ///private readonly ElasticClient _client;
+        private readonly ElasticsearchClient _client;
         private const string indexName = "products2";
-        public ProductRepository(ElasticClient client)
+        public ProductRepository(ElasticsearchClient client)
         {
             _client = client;
         }
@@ -21,7 +22,7 @@ namespace ElasticSearch.Api.Repositories
             var response = await _client.IndexAsync(newProduct, x => x.Index(indexName));
 
 
-            if (!response.IsValid) return null;
+            if (!response.IsSuccess()) return null;
 
             newProduct.Id = response.Id;
 
@@ -42,7 +43,7 @@ namespace ElasticSearch.Api.Repositories
 
             var response = await _client.GetAsync<Product>(id, x => x.Index(indexName));
 
-            if (!response.IsValid)
+            if (!response.IsSuccess())
             {
                 return null;
             }
@@ -54,17 +55,19 @@ namespace ElasticSearch.Api.Repositories
 
         public async Task<bool> UpdateSynch(ProductUpdateDto updateProduct)
         {
-            var response = await _client.UpdateAsync<Product, ProductUpdateDto>(updateProduct.Id, x =>
-            x.Index(indexName).Doc(updateProduct));
+            //nest
+            //var response = await _client.UpdateAsync<Product, ProductUpdateDto>(updateProduct.Id, x =>
+            //x.Index(indexName).Doc(updateProduct));
 
-            return response.IsValid;
+            var response = await _client.UpdateAsync<Product, ProductUpdateDto>(indexName, updateProduct.Id, x => x.Doc(updateProduct));
+            return response.IsSuccess();
         }
         /// <summary>
         /// Hata yönetimi için bu method ele alınmıştır.
         /// </summary>
         /// <param name="id"></param>
         /// <returns></returns>
-        public async Task<DeleteResponse> DeleteAsync(string id)
+        public async Task<Elastic.Clients.Elasticsearch.DeleteResponse> DeleteAsync(string id)
         {
 
             var response = await _client.DeleteAsync<Product>(id, x => x.Index(indexName));
