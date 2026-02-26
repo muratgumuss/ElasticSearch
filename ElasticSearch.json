@@ -657,3 +657,17 @@ GET kibana_sample_data_ecommerce/_search
     }
   }
 }
+
+-- blog index'inin (tablo) oluşturulması.
+PUT blog 
+{
+  "mappings": {
+    "properties": {
+    "title":{"type":"text", "fields":{"keyword":{"type":"keyword"}}},
+    "content":{"type":"text"},
+    "user_id":{"type":"keyword"},
+    "tags":{"type":"keyword"},
+    "created":{"type":"date"}
+    }
+  }
+}
